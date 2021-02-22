@@ -1,6 +1,6 @@
 # jPathfinder
 
-<img src="jPathfinder.png" width="1363" height="910" />
+<img src="jPathfinder.png" />
 
 A quick app that visualises Dijkstra and A* pathfinding algorithms. Written in Java using JavaFX and my own [SquareGrid](https://github.com/SpinningVinyl/SquareGrid) class.
 
