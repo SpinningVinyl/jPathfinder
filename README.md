@@ -8,11 +8,11 @@ A quick app that visualises Dijkstra and A* pathfinding algorithms. Written in J
 
 The user interface is pretty self-explanatory.
 
+The load and save functionality is a bit sketchy at the moment but it works most of the time.
+
 ## Legend
 
 Pink squares represent settled nodes, pale blue squares represent unsettled nodes, red squares represent the path (if it exists) and the fuchsia square is the current node.
-
-The load and save functionality is a bit sketchy at the moment but it works most of the time.
 
 ### License
 
