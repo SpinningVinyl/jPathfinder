@@ -149,10 +149,13 @@ public class Pathfinder extends Application {
             // no path
             isRunning = false;
             pathLabel.setText("No path found!");
+            current = null;
         } else if(next.equals(destination)) {
             // found the path
             destination.setPrevious(next.getPrevious());
             isRunning = false;
+            current = null;
+            visualize();
             drawPath();
         }
 
