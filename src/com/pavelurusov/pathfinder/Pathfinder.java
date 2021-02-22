@@ -24,7 +24,7 @@ import java.util.*;
 * This is my simple visualisation tool for A* and Dijkstra pathfinding algorithms.
 */
 
-public class Main extends Application {
+public class Pathfinder extends Application {
 
     private SquareGrid board;
 
