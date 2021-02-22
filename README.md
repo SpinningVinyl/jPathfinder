@@ -12,7 +12,7 @@ The user interface is pretty self-explanatory, but here is a short explanation a
 
 *Allow diagonal movement*: if turned off, the algorithm will move only to adjacent cells (up, down, left or right).
 
-*Heuristic*: this has a great effect on the algorithm's behaviour. In general, the higher the weight of the heuristic in the full cost of any given node, the faster it finds the target, but the path may be suboptimal.
+*Heuristic*: this has a great effect on the algorithm's behaviour. In general, the higher the weight of the heuristic in the full cost of any given node, the faster it finds the destination, but the path may be suboptimal.
 
 *Speed*: the faster setting highly recommended for Dijkstra!
 
