@@ -294,11 +294,11 @@ public class Pathfinder extends Application {
         int row = board.yToRow(e.getY());
         int column = board.xToColumn(e.getX());
         Node node = new Node(column, row);
-        if(e.getButton() == MouseButton.PRIMARY) { // LMB+drag
+        if(e.getButton() == MouseButton.PRIMARY) { // LMB + drag
             if(!node.equals(origin) && ! node.equals(destination)) {
                 blockedNodes.add(node);
             }
-        } else if(e.getButton() == MouseButton.SECONDARY) {
+        } else if(e.getButton() == MouseButton.SECONDARY) { // RMB + drag
             blockedNodes.remove(node);
         }
         visualize();
