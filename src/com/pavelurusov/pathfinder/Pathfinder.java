@@ -3,6 +3,8 @@ package com.pavelurusov.pathfinder;
 import com.pavelurusov.squaregrid.SquareGrid;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -26,9 +28,10 @@ import java.util.*;
 
 public class Pathfinder extends Application {
 
+    // the main display ;-)
     private SquareGrid board;
 
-
+    // necessary UI elements
     private BorderPane root;
     private Label originLabel;
     private Label destinationLabel;
@@ -38,40 +41,47 @@ public class Pathfinder extends Application {
     private Button startButton;
     private Button saveButton;
     private Button loadButton;
-
+    private Button odSwitchButton;
     private RadioButton algoDijkstra;
     private RadioButton algoAstar;
     private RadioButton speedFaster;
     private RadioButton speedSlower;
-    private RadioButton heuristicQuadratic;
-    private RadioButton heuristicLinear;
-    private RadioButton heuristicPythagorean;
-
+    private RadioButton quadraticRButton;
+    private RadioButton manhattanRButton;
+    private RadioButton euclideanRButton;
+    private RadioButton diagonalRButton;
     private CheckBox diagonalsCheckBox;
 
+    // grid dimensions
     private final int columns = 75;
     private final int rows = 50;
 
+    // step counter
     private int stepCount = 0;
 
+    // algorithm parameters
     private enum Algorithm { Dijkstra,
                         Astar };
 
-    private enum Heuristic { Linear,
+    private enum Heuristic {
+                            Manhattan,
                             Quadratic,
-                            Pythagorean };
+                            Euclidean,
+                            Diagonal };
 
-    private Heuristic heuristic = Heuristic.Linear;
-
+    // default values
+    private Heuristic heuristic = Heuristic.Manhattan;
     private Algorithm algorithm = Algorithm.Astar;
     private boolean allowDiagonals = true;
+    double hWeight = 1d;
 
     private boolean isRunning = false;
 
+    // main loop
     private AnimationTimer timer;
-    private double interval = 1e8;
+    private double interval = 1e8; // default interval = 1/20th of a second
 
-
+    // origin, destination and current nodes
     private Node origin = null;
     private Node destination = null;
     private Node current = null;
@@ -127,29 +137,34 @@ public class Pathfinder extends Application {
 
     // finds the next node to move to
     public Node findNext(Node previous) {
-        for (int px = -1; px <= 1; px++) {
-            for (int py = -1; py <= 1; py++) {
-                if (px == 0 && py == 0) { // this is the current node itself
+        for (int dX = -1; dX <= 1; dX++) {
+            for (int dY = -1; dY <= 1; dY++) {
+                if (dX == 0 && dY == 0) { // this is the current node itself
                     continue;
                 }
-                int nextX = previous.getX() + px;
-                int nextY = previous.getY() + py;
+                int nextX = previous.getX() + dX;
+                int nextY = previous.getY() + dY;
 
 //              calculates costs for the node at nextX, nextY and returns it
                 Node tempNode = processCandidate(nextX, nextY, previous);
+//              if it's not null, add it to unsettled
                 if (tempNode != null) {
                     unsettledNodes.add(tempNode);
+                    stepCount++; // opening a node counts as a step
                 }
             }
         }
         // set the current node to the lowest cost unsettled node
         Node next = lowestCostNode();
+        stepCount++; // moving into an unsettled node counts as a step
 
         if (next == null) {
             // no path
             isRunning = false;
             pathLabel.setText("No path found!");
             current = null;
+            visualize();
+            board.redraw();
         } else if(next.equals(destination)) {
             // found the path
             destination.setPrevious(next.getPrevious());
@@ -157,6 +172,7 @@ public class Pathfinder extends Application {
             current = null;
             visualize();
             drawPath();
+            board.redraw();
         }
 
 //      remove the current node from unsettled
@@ -171,8 +187,6 @@ public class Pathfinder extends Application {
 
 //    calculate costs for node at x,y and return the node
     private Node processCandidate(int x, int y, Node currentNode) {
-        stepCount++; // the step counter is incremented every time this method is called
-
         // check if x,y are outside of map boundaries
         if (x < 0 || y < 0 || x >= columns || y >= rows) {
             return null;
@@ -180,7 +194,8 @@ public class Pathfinder extends Application {
 //      prevent the algorithm from jumping across diagonal borders,
 //      this also disables cutting corners
         if((Math.abs(x - currentNode.getX()) != 0) && (Math.abs(y - currentNode.getY()) != 0)) {
-            if (blockedNodes.contains(new Node(x,currentNode.getY())) || blockedNodes.contains(new Node(currentNode.getX(),y))) {
+            if (blockedNodes.contains(new Node(x,currentNode.getY()))
+                    || blockedNodes.contains(new Node(currentNode.getX(),y))) {
                 return null;
             }
         }
@@ -214,23 +229,26 @@ public class Pathfinder extends Application {
             int distanceToDestY = Math.abs(y - destination.getY());
             double hCost = 0;
             switch(heuristic) {
-                case Linear:
+                case Manhattan:
                     hCost = distanceToDestX + distanceToDestY;
                     break;
-                case Pythagorean:
+                case Euclidean:
                     hCost = Math.sqrt(square(distanceToDestX) + square(distanceToDestY));
                     break;
                 case Quadratic:
                     hCost = square(distanceToDestX) + square(distanceToDestY);
+                    break;
+                case Diagonal:
+                    hCost = Math.max(distanceToDestX, distanceToDestY);
             }
-            node.setHCost(hCost);
+            node.setHCost(hWeight * hCost);
             // F cost = G cost + H cost
             node.setFCost(gCost + hCost);
         }
         return node;
     }
 
-    // returns the lowest cost node from the list of unsettled nodes
+    // returns the lowest cost node from the pool of unsettled nodes
     private Node lowestCostNode() {
         if(unsettledNodes.size() != 0) {
             return Collections.min(unsettledNodes);
@@ -251,16 +269,44 @@ public class Pathfinder extends Application {
     }
 
     private void setOrigin(Node n) {
-        if (n != null) {
-            origin = n;
-            originLabel.setText("Origin: ["+n.getX() + "," + n.getY() + "]");
+        if (n != null) { // origin can't be null or equal to destination
+            if(!n.equals(destination)) {
+                blockedNodes.remove(n); // remove n from the list of blocked nodes
+                origin = n;
+                originLabel.setText("Origin: [" + n.getX() + "," + n.getY() + "]");
+            }
         }
     }
 
     private void setDestination(Node n) {
-        if (n != null) {
-            destination = n;
-            destinationLabel.setText("Destination: [" + n.getX() + "," + n.getY() + "]");
+        if (n != null) { // destination can't be null or equal to origin
+            if(!n.equals(origin)) {
+                blockedNodes.remove(n); // remove n from the list of blocked nodes
+                destination = n;
+                destinationLabel.setText("Destination: [" + n.getX() + "," + n.getY() + "]");
+            }
+        }
+    }
+
+    private void setBlocked(Node n) {
+        if(n != null) {
+            // origin and destination can't be added to blocked
+            if (!n.equals(origin) && !n.equals(destination)) {
+                blockedNodes.add(n);
+            }
+        }
+    }
+
+    private void odSwitch() {
+        if(origin != null && destination != null) {
+            Node tempOrigin = new Node(destination.getX(), destination.getY());
+            Node tempDestination = new Node(origin.getX(), origin.getY());
+            destination = null;
+            origin = null;
+            setDestination(tempDestination);
+            setOrigin(tempOrigin);
+            visualize();
+            board.redraw();
         }
     }
 
@@ -274,15 +320,11 @@ public class Pathfinder extends Application {
                 blockedNodes.remove(node);
             } else if (e.getButton() == MouseButton.PRIMARY) {
                 if (e.isControlDown()) {
-                    blockedNodes.remove(node);
                     setOrigin(node);
                 } else if (e.isAltDown()) {
-                    blockedNodes.remove(node);
                     setDestination(node);
                 } else {
-                    if (!node.equals(origin) && !node.equals(destination)) {
-                        blockedNodes.add(node);
-                    }
+                    setBlocked(node);
                 }
             }
             visualize();
@@ -295,9 +337,7 @@ public class Pathfinder extends Application {
         int column = board.xToColumn(e.getX());
         Node node = new Node(column, row);
         if(e.getButton() == MouseButton.PRIMARY) { // LMB + drag
-            if(!node.equals(origin) && ! node.equals(destination)) {
-                blockedNodes.add(node);
-            }
+            setBlocked(node);
         } else if(e.getButton() == MouseButton.SECONDARY) { // RMB + drag
             blockedNodes.remove(node);
         }
@@ -313,13 +353,15 @@ public class Pathfinder extends Application {
             algoDijkstra.setDisable(true);
             algoAstar.setDisable(true);
             diagonalsCheckBox.setDisable(true);
-            heuristicLinear.setDisable(true);
-            heuristicQuadratic.setDisable(true);
-            heuristicPythagorean.setDisable(true);
+            manhattanRButton.setDisable(true);
+            quadraticRButton.setDisable(true);
+            euclideanRButton.setDisable(true);
+            diagonalRButton.setDisable(true);
             resetButton.setDisable(true);
             saveButton.setDisable(true);
             loadButton.setDisable(true);
             startButton.setDisable(true);
+            odSwitchButton.setDisable(true);
             timer.start();
         }
     }
@@ -341,10 +383,12 @@ public class Pathfinder extends Application {
         pathLabel.setText("");
         algoDijkstra.setDisable(false);
         algoAstar.setDisable(false);
-        heuristicLinear.setDisable(false);
-        heuristicQuadratic.setDisable(false);
-        heuristicPythagorean.setDisable(false);
+        manhattanRButton.setDisable(false);
+        quadraticRButton.setDisable(false);
+        euclideanRButton.setDisable(false);
+        diagonalRButton.setDisable(false);
         diagonalsCheckBox.setDisable(false);
+        odSwitchButton.setDisable(false);
         saveButton.setDisable(false);
         loadButton.setDisable(false);
         resetButton.setDisable(true);
@@ -361,7 +405,7 @@ public class Pathfinder extends Application {
 
     private void setInterval() {
         if(speedFaster.isSelected()) {
-            interval = 1e7;
+            interval = 5e6;
         } else if (speedSlower.isSelected()) {
             interval = 1e8;
         }
@@ -372,12 +416,14 @@ public class Pathfinder extends Application {
     }
 
     private void setHeuristic() {
-        if(heuristicLinear.isSelected()) {
-            heuristic = Heuristic.Linear;
-        } else if (heuristicQuadratic.isSelected()) {
+        if(manhattanRButton.isSelected()) {
+            heuristic = Heuristic.Manhattan;
+        } else if (quadraticRButton.isSelected()) {
             heuristic = Heuristic.Quadratic;
-        } else if (heuristicPythagorean.isSelected()) {
-            heuristic = Heuristic.Pythagorean;
+        } else if (euclideanRButton.isSelected()) {
+            heuristic = Heuristic.Euclidean;
+        } else {
+            heuristic = Heuristic.Diagonal;
         }
     }
 
@@ -400,10 +446,10 @@ public class Pathfinder extends Application {
             board.setCellColor(current.getY(), current.getX(), Color.FUCHSIA);
         }
         if (origin != null) {
-            board.setCellColor(origin.getY(), origin.getX(), Color.DARKGREEN);
+            board.setCellColor(origin.getY(), origin.getX(), Color.GREEN);
         }
         if (destination != null) {
-            board.setCellColor(destination.getY(), destination.getX(), Color.DARKBLUE);
+            board.setCellColor(destination.getY(), destination.getX(), Color.BLUE);
         }
 
     }
@@ -411,11 +457,23 @@ public class Pathfinder extends Application {
     private void drawPath() {
         visualize();
         ArrayList<Node> pathList = fullPath();
-        for (Node n : pathList) {
-            board.setCellColor(n.getY(), n.getX(), Color.RED);
+        // The path is actually missing the last step.
+        // Here I'm estimating the cost of this step as 1 if diagonal moves are not allowed,
+        // and as 1.2 if diagonal moves are allowed (the actual cost of one step
+        // in this case could be either 1 or sqrt(2))
+        double pathCost = 1;
+        if (allowDiagonals) {
+            pathCost = 1.2;
         }
-        board.redraw();
-        pathLabel.setText("Path length: " + pathList.size());
+        for (int i = 0; i < pathList.size(); i++) {
+            int x = pathList.get(i).getX();
+            int y = pathList.get(i).getY();
+            board.setCellColor(y, x, Color.DARKRED);
+            if (i < pathList.size() - 1) {
+                pathCost += Math.abs(pathList.get(i).getGCost() - pathList.get(i+1).getGCost());
+            }
+        }
+        pathLabel.setText("Path length: " + pathList.size() + ", cost: " + String.format("%.2f", pathCost));
     }
 
     // set up the UI and return the root
@@ -449,17 +507,20 @@ public class Pathfinder extends Application {
         resetButton.setMaxWidth(Double.MAX_VALUE);
         resetButton.setDisable(true);
 
+        odSwitchButton = new Button("O ⇆ D");
+        odSwitchButton.setFont(font);
+        odSwitchButton.setMaxWidth(Double.MAX_VALUE);
+
         saveButton = new Button("Save map");
         loadButton = new Button("Load map");
         saveButton.setFont(font);
         loadButton.setFont(font);
         saveButton.setMaxWidth(Double.MAX_VALUE);
         loadButton.setMaxWidth(Double.MAX_VALUE);
+        odSwitchButton.setOnMouseClicked(e -> odSwitch());
 
         saveButton.setOnMouseClicked(e -> saveMap());
         loadButton.setOnMouseClicked(e -> loadMap());
-
-
         startButton.setOnMouseClicked(e -> doStart());
         resetButton.setOnMouseClicked(e -> doReset());
 
@@ -499,25 +560,30 @@ public class Pathfinder extends Application {
         heuristicLabel.setFont(fontBold);
         heuristicLabel.setStyle("-fx-padding: 20px 0 0 0;");
         ToggleGroup heuristicGroup = new ToggleGroup();
-        heuristicQuadratic = new RadioButton("Quadratic");
-        heuristicQuadratic.setToggleGroup(heuristicGroup);
-        heuristicQuadratic.setFont(font);
-        heuristicQuadratic.setMaxWidth(Double.MAX_VALUE);
-        heuristicLinear = new RadioButton("Linear");
-        heuristicLinear.setToggleGroup(heuristicGroup);
-        heuristicLinear.setFont(font);
-        heuristicLinear.setMaxWidth(Double.MAX_VALUE);
-        heuristicPythagorean = new RadioButton("Pythagorean");
-        heuristicPythagorean.setToggleGroup(heuristicGroup);
-        heuristicPythagorean.setFont(font);
-        heuristicPythagorean.setMaxWidth(Double.MAX_VALUE);
-        heuristicLinear.setSelected(true);
-        heuristicQuadratic.setOnAction(e -> setHeuristic());
-        heuristicLinear.setOnAction(e -> setHeuristic());
-        heuristicPythagorean.setOnAction(e -> setHeuristic());
+        quadraticRButton = new RadioButton("Quadratic");
+        quadraticRButton.setToggleGroup(heuristicGroup);
+        quadraticRButton.setFont(font);
+        quadraticRButton.setMaxWidth(Double.MAX_VALUE);
+        manhattanRButton = new RadioButton("Manhattan");
+        manhattanRButton.setToggleGroup(heuristicGroup);
+        manhattanRButton.setFont(font);
+        manhattanRButton.setMaxWidth(Double.MAX_VALUE);
+        euclideanRButton = new RadioButton("Euclidean");
+        euclideanRButton.setToggleGroup(heuristicGroup);
+        euclideanRButton.setFont(font);
+        euclideanRButton.setMaxWidth(Double.MAX_VALUE);
+        diagonalRButton = new RadioButton("Diagonal");
+        diagonalRButton.setToggleGroup(heuristicGroup);
+        diagonalRButton.setFont(font);
+        diagonalRButton.setMaxWidth(Double.MAX_VALUE);
+        manhattanRButton.setSelected(true);
+        quadraticRButton.setOnAction(e -> setHeuristic());
+        manhattanRButton.setOnAction(e -> setHeuristic());
+        euclideanRButton.setOnAction(e -> setHeuristic());
+        diagonalRButton.setOnAction(e -> setHeuristic());
 
         diagonalsCheckBox = new CheckBox("Allow\ndiagonal\nmovement");
-        diagonalsCheckBox.setStyle("-fx-padding: 20px 0 0 0;");
+        diagonalsCheckBox.setStyle("-fx-padding: 20px 0 20px 0;");
         diagonalsCheckBox.setSelected(true);
         diagonalsCheckBox.setFont(font);
         diagonalsCheckBox.setOnAction(e -> setAllowDiagonals());
@@ -526,7 +592,8 @@ public class Pathfinder extends Application {
         VBox rightPane = new VBox(10, startButton, resetButton, saveButton, loadButton,
                 algoLabel, algoAstar, algoDijkstra,
                 diagonalsCheckBox,
-                heuristicLabel, heuristicQuadratic, heuristicLinear, heuristicPythagorean,
+                odSwitchButton,
+                heuristicLabel, quadraticRButton, manhattanRButton, euclideanRButton, diagonalRButton,
                 speedLabel, speedFaster, speedSlower);
         rightPane.setStyle("-fx-padding: 8px;");
         rightPane.setAlignment(Pos.TOP_LEFT);
@@ -604,24 +671,26 @@ public class Pathfinder extends Application {
                     if(splitLine.length != 3) {
                         break;
                     } else {
-                        int x = 0;
-                        int y = 0;
+                        int x = -1;
+                        int y = -1;
                         try {
                             x = Integer.parseInt(splitLine[1]);
                             y = Integer.parseInt(splitLine[2]);
                         } catch (NumberFormatException e) {
                             e.printStackTrace();
                         }
-                        switch(splitLine[0]) {
-                            case "O":
-                                setOrigin(new Node(x, y));
-                                break;
-                            case "D":
-                                setDestination(new Node(x, y));
-                                break;
-                            case "B":
-                                blockedNodes.add(new Node(x, y));
-                                break;
+                        if(x != -1 && y != -1) {
+                            switch (splitLine[0]) {
+                                case "O":
+                                    setOrigin(new Node(x, y));
+                                    break;
+                                case "D":
+                                    setDestination(new Node(x, y));
+                                    break;
+                                case "B":
+                                    setBlocked(new Node(x, y));
+                                    break;
+                            }
                         }
                     }
                 }
@@ -641,7 +710,6 @@ public class Pathfinder extends Application {
             board.redraw();
         }
     }
-
 
     public static void main(String[] args) {
         launch(args);
