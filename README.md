@@ -8,7 +8,7 @@ A quick app that visualises Dijkstra and A* pathfinding algorithms. Written in J
 
 The user interface is pretty self-explanatory, but here is a short explanation anyway.
 
-**Algorithm**: A* (A-star) or Dijkstra. Dijkstra's algorithm doesn't have a heuristic component and usually takes longer to find the destination than A* (it has other advantages but they're mostly irrelevant here).
+**Algorithm**: A* (A-star) or Dijkstra. Dijkstra's algorithm doesn't have a heuristic component and usually takes longer to find the destination than A* (it has other advantages, but they are mostly irrelevant here).
 
 **Allow diagonal movement**: if turned off, the algorithm will move only to adjacent cells (up, down, left or right).
 
@@ -33,7 +33,7 @@ I have also included some sample maps that showcase the difference between the t
 
 ## Legend
 
-Pink squares represent settled nodes, pale blue squares represent unsettled nodes, dark red squares represent the path (if it exists) and the fuchsia square is the current node.
+Pink squares represent settled nodes, pale blue squares represent unsettled nodes, dark red squares represent the path (if it exists), and the fuchsia square is the current node.
 
 ### License
 
