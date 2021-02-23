@@ -553,6 +553,7 @@ public class Pathfinder extends Application {
         }
 
         FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Path map", "*.pathmap"));
         FileWriter fw = null;
         BufferedWriter bw = null;
         File saveFile = fileChooser.showSaveDialog(root.getScene().getWindow());
@@ -584,6 +585,7 @@ public class Pathfinder extends Application {
 
     private void loadMap() {
         FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Path map", "*.pathmap"));
         File loadFile = fileChooser.showOpenDialog(root.getScene().getWindow());
         FileReader fr = null;
         BufferedReader br = null;
