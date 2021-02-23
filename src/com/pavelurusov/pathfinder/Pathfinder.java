@@ -136,7 +136,7 @@ public class Pathfinder extends Application {
                 int nextY = previous.getY() + py;
 
 //              calculates costs for the node at nextX, nextY and returns it
-                Node tempNode = processNode(nextX, nextY, previous);
+                Node tempNode = processCandidate(nextX, nextY, previous);
                 if (tempNode != null) {
                     unsettledNodes.add(tempNode);
                 }
@@ -170,8 +170,10 @@ public class Pathfinder extends Application {
     }
 
 //    calculate costs for node at x,y and return the node
-    private Node processNode(int x, int y, Node currentNode) {
-        stepCount++;
+    private Node processCandidate(int x, int y, Node currentNode) {
+        stepCount++; // the step counter is incremented every time this method is called
+
+        // check if x,y are outside of map boundaries
         if (x < 0 || y < 0 || x >= columns || y >= rows) {
             return null;
         }
@@ -199,9 +201,9 @@ public class Pathfinder extends Application {
         }
         node.setPrevious(currentNode);
         // calculate G cost
-        int distanceX = Math.abs(x - currentNode.getX());
-        int distanceY = Math.abs(y - currentNode.getY());
-        double gCost = currentNode.getGCost() + Math.sqrt(square(distanceX) + square(distanceY));
+        int dX = Math.abs(x - currentNode.getX());
+        int dY = Math.abs(y - currentNode.getY());
+        double gCost = currentNode.getGCost() + Math.sqrt(square(dX) + square(dY));
         node.setGCost(gCost);
 
         if (algorithm == Algorithm.Dijkstra) { // Dijkstra doesn't include the heuristic element
@@ -240,7 +242,7 @@ public class Pathfinder extends Application {
     private ArrayList<Node> fullPath() {
         ArrayList<Node> pathList = new ArrayList<>();
         Node previousNode = destination.getPrevious();
-        while (!previousNode.equals(origin)) {
+        while (!previousNode.equals(origin)) { // repeat until we reach origin
             pathList.add(previousNode);
             previousNode = previousNode.getPrevious();
         }
@@ -297,9 +299,7 @@ public class Pathfinder extends Application {
                 blockedNodes.add(node);
             }
         } else if(e.getButton() == MouseButton.SECONDARY) {
-            if (board.getCellColor(row, column) == Color.BLACK) {
-                blockedNodes.remove(node);
-            }
+            blockedNodes.remove(node);
         }
         visualize();
         board.redraw();
@@ -319,6 +319,7 @@ public class Pathfinder extends Application {
             resetButton.setDisable(true);
             saveButton.setDisable(true);
             loadButton.setDisable(true);
+            startButton.setDisable(true);
             timer.start();
         }
     }
@@ -333,7 +334,6 @@ public class Pathfinder extends Application {
         unsettledNodes.clear();
         settledNodes.clear();
         current = null;
-        board.clearGrid();
         stepCount = 0;
         visualize();
         board.redraw();
@@ -382,8 +382,9 @@ public class Pathfinder extends Application {
     }
 
     private void visualize() {
-        // draw settled nodes
         board.clearGrid();
+
+        // draw settled nodes
         for (Node n : settledNodes) {
             board.setCellColor(n.getY(), n.getX(), Color.SALMON);
         }
