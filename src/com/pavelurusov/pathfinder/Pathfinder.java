@@ -3,8 +3,6 @@ package com.pavelurusov.pathfinder;
 import com.pavelurusov.squaregrid.SquareGrid;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -51,6 +49,7 @@ public class Pathfinder extends Application {
     private RadioButton euclideanRButton;
     private RadioButton diagonalRButton;
     private CheckBox diagonalsCheckBox;
+    private CheckBox pathCorrectionCheckBox;
 
     // grid dimensions
     private final int columns = 75;
@@ -61,19 +60,21 @@ public class Pathfinder extends Application {
 
     // algorithm parameters
     private enum Algorithm { Dijkstra,
-                        Astar };
+                        Astar }
 
     private enum Heuristic {
                             Manhattan,
                             Quadratic,
                             Euclidean,
-                            Diagonal };
+                            Diagonal }
 
     // default values
-    private Heuristic heuristic = Heuristic.Manhattan;
+    private Heuristic heuristic = Heuristic.Euclidean;
     private Algorithm algorithm = Algorithm.Astar;
     private boolean allowDiagonals = true;
-    double hWeight = 1d;
+    private final double hWeight = 1d; // reserved for future use ;-)
+
+    private boolean pathCorrection = false;
 
     private boolean isRunning = false;
 
@@ -146,7 +147,7 @@ public class Pathfinder extends Application {
                 int nextY = previous.getY() + dY;
 
 //              calculates costs for the node at nextX, nextY and returns it
-                Node tempNode = processCandidate(nextX, nextY, previous);
+                Node tempNode = processSuccessor(nextX, nextY, previous);
 //              if it's not null, add it to unsettled
                 if (tempNode != null) {
                     unsettledNodes.add(tempNode);
@@ -158,6 +159,45 @@ public class Pathfinder extends Application {
         Node next = lowestCostNode();
         stepCount++; // moving into an unsettled node counts as a step
 
+//      On-the-fly path correction:
+//      Check each neighbouring unsettled node one by one and if its G-cost is higher than
+//      the cost of the current node + distance to the unsettled node, update the costs
+//      and set the current node to be the predecessor of the unsettled node.
+//      Improves path quality but adds a lot of additional steps.
+        if(algorithm == Algorithm.Astar && next != null) {
+            if (pathCorrection) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        if (dx == 0 && dy == 0) {
+                            continue;
+                        }
+                        if (!allowDiagonals && dx != 0 && dy != 0) {
+                            continue;
+                        }
+                        stepCount++;
+                        int nextX = next.getX() + dx;
+                        int nextY = next.getY() + dy;
+                        // don't cut corners and jump through diagonal fences
+                        if((dx != 0) && (dy != 0)) {
+                            if (blockedNodes.contains(new Node(nextX,next.getY()))
+                                    || blockedNodes.contains(new Node(next.getX(),nextY))) {
+                                continue;
+                            }
+                        }
+                        if (unsettledNodes.contains(new Node(nextX, nextY))) {
+                            double nextG = next.getGCost() + Math.sqrt(square(dx) + square(dy));
+                            Node unsettledNode = getUnsettledNode(new Node(nextX, nextY));
+                            if (nextG < unsettledNode.getGCost()) {
+                                unsettledNode.setPredecessor(next);
+                                unsettledNode.setGCost(nextG);
+                                unsettledNode.setFCost(nextG + unsettledNode.getHCost());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (next == null) {
             // no path
             isRunning = false;
@@ -167,7 +207,7 @@ public class Pathfinder extends Application {
             board.redraw();
         } else if(next.equals(destination)) {
             // found the path
-            destination.setPrevious(next.getPrevious());
+            destination.setPredecessor(next.getPredecessor());
             isRunning = false;
             current = null;
             visualize();
@@ -186,14 +226,14 @@ public class Pathfinder extends Application {
     }
 
 //    calculate costs for node at x,y and return the node
-    private Node processCandidate(int x, int y, Node currentNode) {
+    private Node processSuccessor(int x, int y, Node currentNode) {
         // check if x,y are outside of map boundaries
         if (x < 0 || y < 0 || x >= columns || y >= rows) {
             return null;
         }
 //      prevent the algorithm from jumping across diagonal borders,
 //      this also disables cutting corners
-        if((Math.abs(x - currentNode.getX()) != 0) && (Math.abs(y - currentNode.getY()) != 0)) {
+        if((x - currentNode.getX() != 0) && (y - currentNode.getY() != 0)) {
             if (blockedNodes.contains(new Node(x,currentNode.getY()))
                     || blockedNodes.contains(new Node(currentNode.getX(),y))) {
                 return null;
@@ -214,7 +254,7 @@ public class Pathfinder extends Application {
         if (settledNodes.contains(node) || blockedNodes.contains(node) || unsettledNodes.contains(node)) {
             return null;
         }
-        node.setPrevious(currentNode);
+        node.setPredecessor(currentNode);
         // calculate G cost
         int dX = Math.abs(x - currentNode.getX());
         int dY = Math.abs(y - currentNode.getY());
@@ -259,13 +299,22 @@ public class Pathfinder extends Application {
     // reconstruct the path back from destination
     private ArrayList<Node> fullPath() {
         ArrayList<Node> pathList = new ArrayList<>();
-        Node previousNode = destination.getPrevious();
+        Node previousNode = destination.getPredecessor();
         while (!previousNode.equals(origin)) { // repeat until we reach origin
             pathList.add(previousNode);
-            previousNode = previousNode.getPrevious();
+            previousNode = previousNode.getPredecessor();
         }
         Collections.reverse(pathList);
         return pathList;
+    }
+
+    private Node getUnsettledNode(Node that) {
+        for (Node n : unsettledNodes) {
+            if (n.equals(that)) {
+                return n;
+            }
+        }
+        return null;
     }
 
     private void setOrigin(Node n) {
@@ -353,6 +402,7 @@ public class Pathfinder extends Application {
             algoDijkstra.setDisable(true);
             algoAstar.setDisable(true);
             diagonalsCheckBox.setDisable(true);
+            pathCorrectionCheckBox.setDisable(true);
             manhattanRButton.setDisable(true);
             quadraticRButton.setDisable(true);
             euclideanRButton.setDisable(true);
@@ -388,6 +438,7 @@ public class Pathfinder extends Application {
         euclideanRButton.setDisable(false);
         diagonalRButton.setDisable(false);
         diagonalsCheckBox.setDisable(false);
+        pathCorrectionCheckBox.setDisable(false);
         odSwitchButton.setDisable(false);
         saveButton.setDisable(false);
         loadButton.setDisable(false);
@@ -425,6 +476,10 @@ public class Pathfinder extends Application {
         } else {
             heuristic = Heuristic.Diagonal;
         }
+    }
+
+    private void setPathCorrection() {
+        pathCorrection = pathCorrectionCheckBox.isSelected();
     }
 
     private void visualize() {
@@ -576,22 +631,28 @@ public class Pathfinder extends Application {
         diagonalRButton.setToggleGroup(heuristicGroup);
         diagonalRButton.setFont(font);
         diagonalRButton.setMaxWidth(Double.MAX_VALUE);
-        manhattanRButton.setSelected(true);
+        euclideanRButton.setSelected(true);
         quadraticRButton.setOnAction(e -> setHeuristic());
         manhattanRButton.setOnAction(e -> setHeuristic());
         euclideanRButton.setOnAction(e -> setHeuristic());
         diagonalRButton.setOnAction(e -> setHeuristic());
 
         diagonalsCheckBox = new CheckBox("Allow\ndiagonal\nmovement");
-        diagonalsCheckBox.setStyle("-fx-padding: 20px 0 20px 0;");
+        diagonalsCheckBox.setStyle("-fx-padding: 20px 0 0 0;");
         diagonalsCheckBox.setSelected(true);
         diagonalsCheckBox.setFont(font);
         diagonalsCheckBox.setOnAction(e -> setAllowDiagonals());
 
+        pathCorrectionCheckBox = new CheckBox("On-the-fly\npath\ncorrection");
+        pathCorrectionCheckBox.setStyle("-fx-padding: 0 0 20px 0;");
+        pathCorrectionCheckBox.setSelected(false);
+        pathCorrectionCheckBox.setFont(font);
+        pathCorrectionCheckBox.setOnAction(e -> setPathCorrection());
 
         VBox rightPane = new VBox(10, startButton, resetButton, saveButton, loadButton,
                 algoLabel, algoAstar, algoDijkstra,
                 diagonalsCheckBox,
+                pathCorrectionCheckBox,
                 odSwitchButton,
                 heuristicLabel, quadraticRButton, manhattanRButton, euclideanRButton, diagonalRButton,
                 speedLabel, speedFaster, speedSlower);

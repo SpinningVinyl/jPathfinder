@@ -16,7 +16,7 @@ public class Node implements Comparable<Node>, Serializable {
     // fCost = full cost of this node
     private static final long serialVersionUID = 46_467_160L;
 
-    private Node previous;
+    private Node predecessor;
 
     public Node(int x, int y) {
         this.x = Math.max(x, 0);
@@ -35,9 +35,9 @@ public class Node implements Comparable<Node>, Serializable {
         this.hCost = Math.max(hCost, 0);
     }
 
-    public void setPrevious(Node parent) {
+    public void setPredecessor(Node parent) {
         if (parent != null) {
-            this.previous = parent;
+            this.predecessor = parent;
         }
     }
 
@@ -65,8 +65,8 @@ public class Node implements Comparable<Node>, Serializable {
         return this;
     }
 
-    public Node getPrevious() {
-        return previous;
+    public Node getPredecessor() {
+        return predecessor;
     }
 
     @Override
