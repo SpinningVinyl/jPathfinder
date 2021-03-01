@@ -114,6 +114,7 @@ public class Pathfinder extends Application {
         // set up the UI and the scene graph
         root = setUI();
         stage.setTitle("jPathfinder");
+        stage.setResizable(false);
         stage.setScene(new Scene(root));
         stage.show();
     }
@@ -681,7 +682,7 @@ public class Pathfinder extends Application {
         }
 
         FileChooser fileChooser = new FileChooser();
-        fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Path map", "*.pathmap"));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Path map", "*.pathmap"));
         FileWriter fw = null;
         BufferedWriter bw = null;
         File saveFile = fileChooser.showSaveDialog(root.getScene().getWindow());
@@ -727,28 +728,29 @@ public class Pathfinder extends Application {
                 fr = new FileReader(loadFile);
                 br = new BufferedReader(fr);
                 String input;
+                // reading the file line by line
                 while((input = br.readLine()) != null) {
+                    // split the line using comma as a separator
                     String[] splitLine = input.split(",");
-                    if(splitLine.length != 3) {
-                        break;
-                    } else {
+                    // if there are three parts, proceed with parsing
+                    if(splitLine.length == 3) {
                         int x = -1;
                         int y = -1;
                         try {
-                            x = Integer.parseInt(splitLine[1]);
-                            y = Integer.parseInt(splitLine[2]);
+                            x = Integer.parseInt(splitLine[1]); // try to parse x
+                            y = Integer.parseInt(splitLine[2]); // try to parse y
                         } catch (NumberFormatException e) {
                             e.printStackTrace();
                         }
-                        if(x != -1 && y != -1) {
+                        if(x != -1 && y != -1) { // if parsing successful, look at the type of the node
                             switch (splitLine[0]) {
-                                case "O":
+                                case "O": // origin
                                     setOrigin(new Node(x, y));
                                     break;
-                                case "D":
+                                case "D": // destination
                                     setDestination(new Node(x, y));
                                     break;
-                                case "B":
+                                case "B": // blocked
                                     setBlocked(new Node(x, y));
                                     break;
                             }
