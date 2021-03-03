@@ -12,7 +12,7 @@ The user interface is pretty self-explanatory, but here is a short explanation a
 
 **Allow diagonal movement**: if turned off, the algorithm will move only to adjacent cells (up, down, left or right).
 
-**On-the fly path correction**: allows recalculation of the G-cost of neighbouring unsettled nodes. Greatly increases optimality.
+**On-the fly path correction**: allows recalculation of the G-cost of neighbouring unsettled nodes. Greatly increases path optimality.
 
 **The O ⇆ D button** quickly swaps the origin and the destination.
 
