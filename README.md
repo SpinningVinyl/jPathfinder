@@ -12,6 +12,8 @@ The user interface is pretty self-explanatory, but here is a short explanation a
 
 **Allow diagonal movement**: if turned off, the algorithm will move only to adjacent cells (up, down, left or right).
 
+**On-the fly path correction**: allows recalculation of the G-cost of neighbouring unsettled nodes. Greatly increases optimality.
+
 **The O ⇆ D button** quickly swaps the origin and the destination.
 
 **Heuristic**: this greatly affects the algorithm's behaviour. In general, the higher the weight of the heuristic in the full cost of any given node, the faster it finds the destination at the cost of optimality. 
