@@ -485,10 +485,16 @@ public class Pathfinder extends Application {
 
     private void visualize() {
         board.clearGrid();
-
         // draw settled nodes
         for (Node n : settledNodes) {
-            board.setCellColor(n.getY(), n.getX(), Color.SALMON);
+            // simple colour visualisation -- to be improved
+            double colorRed = Math.abs((125 - n.getGCost()) / 125);
+            double colorGreen = Math.abs((125 - n.getHCost()) / 125);
+            if (heuristic == Heuristic.Quadratic) {
+                colorRed = Math.abs((125 - n.getGCost()) / 125);
+                colorGreen = Math.abs((8125 - n.getHCost()) / 8125);
+            }
+            board.setCellColor(n.getY(), n.getX(), colorRed, colorGreen, 0);
         }
         // draw unsettled nodes
         for (Node n : unsettledNodes) {

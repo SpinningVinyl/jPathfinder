@@ -35,7 +35,7 @@ I have also included some sample maps that showcase the difference between the t
 
 ## Legend
 
-Pink squares represent settled nodes, pale blue squares represent unsettled nodes, dark red squares represent the path (if it exists), and the fuchsia square is the current node.
+Pale blue squares represent unsettled nodes, dark red squares represent the path (if it exists), and the fuchsia square is the current node. The colour of the settled nodes represents their cost, with the red component determined by the H-cost and the green component determined by the G-cost (in other words, the closer to the destination, the greener it gets). This colouration is very much preliminary, and I hope to improve it in the future. 
 
 ### License
 
