@@ -3,6 +3,8 @@ package com.pavelurusov.pathfinder;
 import com.pavelurusov.squaregrid.SquareGrid;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -73,6 +75,8 @@ public class Pathfinder extends Application {
     private Algorithm algorithm = Algorithm.Astar;
     private boolean allowDiagonals = true;
     private final double hWeight = 1d; // reserved for future use ;-)
+
+    private BooleanProperty runningProperty = new SimpleBooleanProperty();
 
     private boolean pathCorrection = false;
 
@@ -400,19 +404,7 @@ public class Pathfinder extends Application {
             origin.setGCost(0);
             current = origin;
             isRunning = true;
-            algoDijkstra.setDisable(true);
-            algoAstar.setDisable(true);
-            diagonalsCheckBox.setDisable(true);
-            pathCorrectionCheckBox.setDisable(true);
-            manhattanRButton.setDisable(true);
-            quadraticRButton.setDisable(true);
-            euclideanRButton.setDisable(true);
-            diagonalRButton.setDisable(true);
-            resetButton.setDisable(true);
-            saveButton.setDisable(true);
-            loadButton.setDisable(true);
-            startButton.setDisable(true);
-            odSwitchButton.setDisable(true);
+            runningProperty.set(true);
             timer.start();
         }
     }
@@ -420,7 +412,6 @@ public class Pathfinder extends Application {
     private void doStop() {
         timer.stop();
         resetButton.setDisable(false);
-        startButton.setDisable(true);
     }
 
     private void doReset() {
@@ -432,19 +423,8 @@ public class Pathfinder extends Application {
         board.redraw();
         statLabel.setText("");
         pathLabel.setText("");
-        algoDijkstra.setDisable(false);
-        algoAstar.setDisable(false);
-        manhattanRButton.setDisable(false);
-        quadraticRButton.setDisable(false);
-        euclideanRButton.setDisable(false);
-        diagonalRButton.setDisable(false);
-        diagonalsCheckBox.setDisable(false);
-        pathCorrectionCheckBox.setDisable(false);
-        odSwitchButton.setDisable(false);
-        saveButton.setDisable(false);
-        loadButton.setDisable(false);
+        runningProperty.set(false);
         resetButton.setDisable(true);
-        startButton.setDisable(false);
     }
 
     private void setAlgorithm() {
@@ -568,10 +548,12 @@ public class Pathfinder extends Application {
         resetButton.setFont(fontBold);
         resetButton.setMaxWidth(Double.MAX_VALUE);
         resetButton.setDisable(true);
+        startButton.disableProperty().bind(runningProperty);
 
         odSwitchButton = new Button("O ⇆ D");
         odSwitchButton.setFont(font);
         odSwitchButton.setMaxWidth(Double.MAX_VALUE);
+        odSwitchButton.disableProperty().bind(runningProperty);
 
         saveButton = new Button("Save map");
         loadButton = new Button("Load map");
@@ -579,6 +561,8 @@ public class Pathfinder extends Application {
         loadButton.setFont(font);
         saveButton.setMaxWidth(Double.MAX_VALUE);
         loadButton.setMaxWidth(Double.MAX_VALUE);
+        saveButton.disableProperty().bind(runningProperty);
+        loadButton.disableProperty().bind(runningProperty);
         odSwitchButton.setOnMouseClicked(e -> odSwitch());
 
         saveButton.setOnMouseClicked(e -> saveMap());
@@ -594,6 +578,7 @@ public class Pathfinder extends Application {
         algoDijkstra.setToggleGroup(algoGroup);
         algoDijkstra.setMaxWidth(Double.MAX_VALUE);
         algoDijkstra.setFont(font);
+        algoDijkstra.disableProperty().bind(runningProperty);
         algoAstar = new RadioButton("A*");
         algoAstar.setToggleGroup(algoGroup);
         algoAstar.setMaxWidth(Double.MAX_VALUE);
@@ -601,6 +586,7 @@ public class Pathfinder extends Application {
         algoAstar.setSelected(true);
         algoDijkstra.setOnAction(e -> setAlgorithm());
         algoAstar.setOnAction(e -> setAlgorithm());
+        algoAstar.disableProperty().bind(runningProperty);
 
         Label speedLabel = new Label("Speed:");
         speedLabel.setFont(fontBold);
@@ -626,18 +612,22 @@ public class Pathfinder extends Application {
         quadraticRButton.setToggleGroup(heuristicGroup);
         quadraticRButton.setFont(font);
         quadraticRButton.setMaxWidth(Double.MAX_VALUE);
+        quadraticRButton.disableProperty().bind(runningProperty);
         manhattanRButton = new RadioButton("Manhattan");
         manhattanRButton.setToggleGroup(heuristicGroup);
         manhattanRButton.setFont(font);
         manhattanRButton.setMaxWidth(Double.MAX_VALUE);
+        manhattanRButton.disableProperty().bind(runningProperty);
         euclideanRButton = new RadioButton("Euclidean");
         euclideanRButton.setToggleGroup(heuristicGroup);
         euclideanRButton.setFont(font);
         euclideanRButton.setMaxWidth(Double.MAX_VALUE);
+        euclideanRButton.disableProperty().bind(runningProperty);
         diagonalRButton = new RadioButton("Diagonal");
         diagonalRButton.setToggleGroup(heuristicGroup);
         diagonalRButton.setFont(font);
         diagonalRButton.setMaxWidth(Double.MAX_VALUE);
+        diagonalRButton.disableProperty().bind(runningProperty);
         euclideanRButton.setSelected(true);
         quadraticRButton.setOnAction(e -> setHeuristic());
         manhattanRButton.setOnAction(e -> setHeuristic());
@@ -649,12 +639,14 @@ public class Pathfinder extends Application {
         diagonalsCheckBox.setSelected(true);
         diagonalsCheckBox.setFont(font);
         diagonalsCheckBox.setOnAction(e -> setAllowDiagonals());
+        diagonalsCheckBox.disableProperty().bind(runningProperty);
 
         pathCorrectionCheckBox = new CheckBox("On-the-fly\npath\ncorrection");
         pathCorrectionCheckBox.setStyle("-fx-padding: 0 0 20px 0;");
         pathCorrectionCheckBox.setSelected(false);
         pathCorrectionCheckBox.setFont(font);
         pathCorrectionCheckBox.setOnAction(e -> setPathCorrection());
+        pathCorrectionCheckBox.disableProperty().bind(runningProperty);
 
         VBox rightPane = new VBox(10, startButton, resetButton, saveButton, loadButton,
                 algoLabel, algoAstar, algoDijkstra,
